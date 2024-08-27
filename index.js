@@ -1,4 +1,5 @@
 import { dates } from '/utils/dates'
+import OpenAI from 'openai'
 
 const tickersArr = []
 
@@ -60,7 +61,21 @@ async function fetchStockData() {
 }
 
 async function fetchReport(data) {
-    /** AI goes here **/
+    const openai = new OpenAI()
+    const messages = [
+        {
+            role: "system", content: ""
+        },
+        {
+            role: "user", content: ""
+        }
+    ]
+    const completion = await openai.chat.completions.create({
+        model: "gpt-4o-mini", 
+        messages: messages
+    });
+
+    console.log(completion.choices[0].message);
 }
 
 function renderReport(output) {
