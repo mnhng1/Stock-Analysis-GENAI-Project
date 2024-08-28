@@ -1,5 +1,6 @@
 import { dates } from '/utils/dates'
 import OpenAI from 'openai'
+import { config } from 'dotenv';
 
 const tickersArr = []
 
@@ -42,7 +43,7 @@ async function fetchStockData() {
     loadingArea.style.display = 'flex'
     try {
         const stockData = await Promise.all(tickersArr.map(async (ticker) => {
-            const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${dates.startDate}/${dates.endDate}?apiKey=${process.env.POLYGON_API_KEY}`
+            const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${dates.startDate}/${dates.endDate}?apiKey=${import.meta.env.VITE_polygon_api_key}`
             const response = await fetch(url)
             const data = await response.text()
             const status = await response.status
@@ -59,25 +60,45 @@ async function fetchStockData() {
         console.error('error: ', err)
     }
 }
-
 async function fetchReport(data) {
-    const openai = new OpenAI()
+    
     const messages = [
         {
-            role: "system", content: ""
+            role: 'system',
+            content: 'You are a trading guru. Given data on share prices over the past 3 days, write a report of no more than 150 words describing the stocks performance and recommending whether to buy, hold or sell.'
         },
         {
-            role: "user", content: ""
+            role: 'user',
+            content: data
         }
     ]
-    const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini", 
-        messages: messages
-    });
 
-    console.log(completion.choices[0].message);
+    try {
+        const openai = new OpenAI({
+            apiKey: import.meta.env.VITE_openai_api_key,
+            dangerouslyAllowBrowser: true
+        })
+        const response = await openai.chat.completions.create({
+            model: 'gpt-3.5-turbo',
+            messages: messages
+        })
+        renderReport(response.choices[0].message.content)
+
+    } catch (err) {
+        console.log('Error:', err)
+        loadingArea.innerText = 'Unable to access AI. Please refresh and try again'
+    }
+    /** 
+     * Challenge:
+     * 1. Use the OpenAI API to generate a report advising 
+     * on whether to buy or sell the shares based on the data 
+     * that comes in as a parameter.
+     * 
+     * 🎁 See hint.md for help!
+     * 
+     * 🏆 Bonus points: use a try catch to handle errors.
+     * **/
 }
-
 function renderReport(output) {
     loadingArea.style.display = 'none'
     const outputArea = document.querySelector('.output-panel')
