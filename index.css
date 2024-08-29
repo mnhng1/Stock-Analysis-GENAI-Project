@@ -166,6 +166,10 @@ footer {
     display: none;
 }
 
+.output-panel{
+    height: fit-content;
+}
+
 .output-panel p::-moz-scrollbar {
     display: none;
 }

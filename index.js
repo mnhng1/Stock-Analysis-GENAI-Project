@@ -43,13 +43,26 @@ async function fetchStockData() {
     loadingArea.style.display = 'flex'
     try {
         const stockData = await Promise.all(tickersArr.map(async (ticker) => {
-            const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${dates.startDate}/${dates.endDate}?apiKey=${import.meta.env.VITE_polygon_api_key}`
-            const response = await fetch(url)
-            const data = await response.text()
+            const url = `https://polygon-api-worker.minhnguyentuong1.workers.dev/`
+            const headers = {
+                method : 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    'ticker': ticker,
+                    'startDate': dates.startDate,
+                    'endDate': dates.endDate
+
+                })
+            }
+            const response = await fetch(url, headers)
+            const data = await response.json()
             const status = await response.status
             if (status === 200) {
                 apiMessage.innerText = 'Creating report...'
-                return data
+                delete data.request_id
+                return JSON.stringify(data)
             } else {
                 loadingArea.innerText = 'There was an error fetching stock data.'
             }
@@ -65,29 +78,36 @@ async function fetchReport(data) {
     const messages = [
         {
             role: 'system',
-            content: 'You are a trading guru. Given data on share prices over the past 3 days, write a report of no more than 150 words describing the stocks performance and recommending whether to buy, hold or sell.'
+            content: 'You are a trading guru. Given data on share prices of the stock symbol and earning reports over the past 3 days, write a report of no more than 150 words describing the stocks performance and recommending whether to buy, hold or sell of that input stock symbol'
         },
         {
             role: 'user',
             content: data
-        }
-    ]
+        }]
 
     try {
-        const openai = new OpenAI({
-            apiKey: import.meta.env.VITE_openai_api_key,
-            dangerouslyAllowBrowser: true
-        })
-        const response = await openai.chat.completions.create({
-            model: 'gpt-3.5-turbo',
-            messages: messages
-        })
-        renderReport(response.choices[0].message.content)
 
-    } catch (err) {
-        console.log('Error:', err)
-        loadingArea.innerText = 'Unable to access AI. Please refresh and try again'
+    
+    const url = "https://open-ai-worker.minhnguyentuong1.workers.dev/"
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(messages)
+    })
+
+    if (!response.ok) {
+        throw new Error(`Worker Error: ${response.error}` )
     }
+
+    const data = await response.json()
+    renderReport(data.content)
+} catch (err) {
+    console.error(err.message)
+    loadingArea.innerText = 'Unable to access AI. Please refresh and try again'
+}
     /** 
      * Challenge:
      * 1. Use the OpenAI API to generate a report advising 
